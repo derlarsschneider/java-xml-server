@@ -2,9 +2,9 @@
 <CATALOG>
 	<sql-insert>drop table cd if exists</sql-insert>
 	<sql-insert>create table cd (id bigint, title varchar(1024), artist varchar(1024), country varchar(1024), company varchar(1024), price decimal, year int)</sql-insert>
-	<sql-insert>insert into cd (artist) values('Lars Schneider')</sql-insert>
-	<sql-insert>insert into cd (artist) values('Lars Kil')</sql-insert>
-	<sql-insert>insert into cd (artist) values('Laura Schneider')</sql-insert>
+	<sql-insert>insert into cd (artist) values('new Artists 1')</sql-insert>
+	<sql-insert>insert into cd (artist) values('new Artists 2')</sql-insert>
+	<sql-insert>insert into cd (artist) values('new Artists 3')</sql-insert>
 	<CD>
 		<TITLE>Empire Burlesque</TITLE>
 		<ARTIST>Bob Dylan</ARTIST>
