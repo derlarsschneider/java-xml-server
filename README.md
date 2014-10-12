@@ -6,13 +6,18 @@ Example URLs:
 -------------
 - Without the need for sql
   
-  http://localhost:8000/list/src/test/cd-catalogue.xml?xsl=titles.xsl
+  `http://localhost:8000/list/src/test/cd-catalogue.xml?xsl=titles.xsl`
   
-  http://localhost:8000/list/src/test/cd-catalogue.xml?xsl=titles.xsl
-- For sql you cann add more sql parameters: 
+  `http://localhost:8000/list/src/test/cd-catalogue.xml?xsl=artists.xsl`
+
+- For sql you can add more sql parameters: 
+
+  db_driver
 
   db_url
 
   db_user
 
   db_pass
+
+  `http://localhost:8000/list/src/test/cd-catalogue.xml?xsl=artists.xsl&db_driver=org.hsqldb.jdbcDriver&db_user=sa&db_url=jdbc:hsqldb:mem:.`
