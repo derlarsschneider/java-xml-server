@@ -9,70 +9,50 @@ import java.sql.Statement;
 
 public class DatabaseConnection {
 	private static PrintStream log = System.out;
-	private Connection conn;
+	private Connection connection;
 
 	public DatabaseConnection() {
-		init();
+		init("org.hsqldb.jdbcDriver", "jdbc:hsqldb:hsql://localhost:9001", "sa", "");
 	}
 
-	private void init() {
+	public DatabaseConnection(String driver, String url, String user, String pass) {
+		init(driver, url, user, pass);
+	}
+
+	private void init(String driver, String url, String user, String pass) {
 		try {
-			Class.forName("org.hsqldb.jdbcDriver");
+			Class.forName(driver);
 		} catch (ClassNotFoundException e) {
-			log.println(e.getMessage());
-			for (StackTraceElement element: e.getStackTrace()) {
-				log.println(element.toString());
-			}
+			e.printStackTrace();
 		}
 
 		try {
-			conn = DriverManager.getConnection("jdbc:hsqldb:mem:.", "sa", "");
+			connection = DriverManager.getConnection(url, user, pass);
 		} catch (SQLException e) {
-			log.println(e.getMessage());
-			for (StackTraceElement element: e.getStackTrace()) {
-				log.println(element.toString());
-			}
+			e.printStackTrace();
 		}
 	}
 
-	public void insert(String sql) {
-		try {
-			Statement statement = conn.createStatement();
-			statement.execute(sql);
-			log.println(sql);
-		} catch (SQLException e) {
-			log.println(sql);
-			log.println(e.getMessage());
-			for (StackTraceElement element: e.getStackTrace()) {
-				log.println(element.toString());
-			}
-		}
-	}
+	public String select(String sql) throws SQLException {
 
-	public String select(String sql) {
+		Statement statement = connection.createStatement();
 		try {
-			Statement statement = conn.createStatement();
 			statement.execute(sql);
-			ResultSet resultSet = statement.getResultSet();
-			String result = "";
-			int columnCount = resultSet.getMetaData().getColumnCount();
-			while (resultSet.next()) {
-				result += "<tr>";
-				for (int i = 1; i <= columnCount; i++) {
-					result += "<td>" + resultSet.getObject(i) + "</td>";
-				}
-				result += "</tr>";
-			}
-			log.println(result);
-			log.println(sql);
-			return result;
 		} catch (SQLException e) {
-			log.println(sql);
-			log.println(e.getMessage());
-			for (StackTraceElement element: e.getStackTrace()) {
-				log.println(element.toString());
-			}
-			return e.getMessage();
+			e.printStackTrace();
+			System.err.println(sql);
+			return "";
 		}
+		ResultSet resultSet = statement.getResultSet();
+		String result = "";
+		int columnCount = resultSet.getMetaData().getColumnCount();
+		while (resultSet.next()) {
+			result += "<tr>";
+			for (int i = 1; i <= columnCount; i++) {
+				result += "<td>" + resultSet.getObject(i) + "</td>";
+			}
+			result += "</tr>";
+		}
+		return result;
 	}
 }
