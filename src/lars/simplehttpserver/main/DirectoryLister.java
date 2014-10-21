@@ -18,18 +18,22 @@ import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import lars.simplehttpserver.helper.URIUtils;
+
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
 public class DirectoryLister {
-	private static final String context = "list";
+	private static final String listerContext = "list";
+	private static final String transformContext = "trans";
 	private static File currentDir;
 
 	public static void main(String[] args) throws Exception {
 		currentDir = new File(".");
 		HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
-		server.createContext("/" + context, new MyHandler());
+		server.createContext("/" + listerContext, new MyHandler());
+		server.createContext("/" + transformContext, new XSLTProcessor());
 		server.setExecutor(null); // creates a default executor
 		server.start();
 	}
@@ -41,7 +45,7 @@ public class DirectoryLister {
 
 		public void handle(HttpExchange t) throws IOException {
 			URI uri = t.getRequestURI();
-			HashMap<String, String> parameter = parseQuery(uri);
+			HashMap<String, String> parameter = URIUtils.parseQuery(uri);
 
 			try {
 				if (parameter.get("db_driver") != null) {
@@ -55,14 +59,10 @@ public class DirectoryLister {
 			}
 
 			try {
-				if (parameter.get("db_url") != null
-						&& parameter.get("db_user") != null) {
-					String url = parameter.get("db_url") != null ? parameter
-							.get("db_url") : "";
-					String user = parameter.get("db_user") != null ? parameter
-							.get("db_user") : "";
-					String pass = parameter.get("db_pass") != null ? parameter
-							.get("db_pass") : "";
+				if (parameter.get("db_url") != null && parameter.get("db_user") != null) {
+					String url = parameter.get("db_url") != null ? parameter.get("db_url") : "";
+					String user = parameter.get("db_user") != null ? parameter.get("db_user") : "";
+					String pass = parameter.get("db_pass") != null ? parameter.get("db_pass") : "";
 					connection = DriverManager.getConnection(url, user, pass);
 				}
 			} catch (SQLException e) {
@@ -72,8 +72,7 @@ public class DirectoryLister {
 				}
 			}
 
-			String dir = uri.getPath().replaceAll(t.getHttpContext().getPath(),
-					".");
+			String dir = uri.getPath().replaceAll(t.getHttpContext().getPath(), ".");
 			currentDir = new File(dir);
 
 			String response;
@@ -85,8 +84,7 @@ public class DirectoryLister {
 					int splitPos = response.indexOf('>') + 1;
 					StringBuffer buffer = new StringBuffer();
 					buffer.append(response.substring(0, splitPos));
-					buffer.append("<?xml-stylesheet type=\"text/xsl\" href=\""
-							+ parameter.get("xsl") + "\" ?>");
+					buffer.append("<?xml-stylesheet type=\"text/xsl\" href=\"" + parameter.get("xsl") + "\" ?>");
 					buffer.append(response.substring(splitPos));
 					response = buffer.toString();
 				}
@@ -95,19 +93,6 @@ public class DirectoryLister {
 			OutputStream os = t.getResponseBody();
 			os.write(response.getBytes());
 			os.close();
-		}
-
-		private HashMap<String, String> parseQuery(URI uri) {
-			HashMap<String, String> result = new HashMap<String, String>();
-			String query = uri.getQuery();
-			if (query != null) {
-				String[] keyValues = query.split("&");
-				for (int i = 0; i < keyValues.length; i++) {
-					String[] keyValue = keyValues[i].split("=");
-					result.put(keyValue[0], keyValue[1]);
-				}
-			}
-			return result;
 		}
 
 		private String readFile(File file, int size) {
@@ -172,8 +157,7 @@ public class DirectoryLister {
 		}
 
 		private String replaceSqlWithResult(String string) {
-			Pattern pattern = Pattern
-					.compile("<sql-insert>(.*?)<\\/sql-insert>");
+			Pattern pattern = Pattern.compile("<sql-insert>(.*?)<\\/sql-insert>");
 			Matcher matcher = pattern.matcher(string);
 
 			while (matcher.find()) {
@@ -233,13 +217,11 @@ public class DirectoryLister {
 			String response = "";
 			response += "<p>" + currentDir + "</p>";
 			if (currentDir.getParent() != null) {
-				response += "<li><a href=\"/" + context + "/"
-						+ currentDir.getParent() + "/" + "\">..</a></li>";
+				response += "<li><a href=\"/" + listerContext + "/" + currentDir.getParent() + "/" + "\">..</a></li>";
 			}
 			for (File file : list) {
-				response += "<li><a href=\"/" + context + "/"
-						+ currentDir.getPath() + "/" + file.getName() + "\">"
-						+ file.getName() + "</a> " + file.length() + " </li>";
+				response += "<li><a href=\"/" + listerContext + "/" + currentDir.getPath() + "/" + file.getName()
+						+ "\">" + file.getName() + "</a> " + file.length() + " </li>";
 			}
 			return response;
 		}
