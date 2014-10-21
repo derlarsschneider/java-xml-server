@@ -1,15 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CATALOG>
-	<sql-insert>drop table cd if exists</sql-insert>
-	<sql-insert>create table cd (id bigint, title varchar(1024), artist varchar(1024), country varchar(1024), company varchar(1024), price decimal, year int)</sql-insert>
-	<sql-insert>insert into cd (artist) values('new Artists 1')</sql-insert>
-	<sql-insert>insert into cd (artist) values('new Artists 2')</sql-insert>
-	<sql-insert>insert into cd (artist) values('new Artists 3')</sql-insert>
 	<CD>
 		<TITLE>Empire Burlesque</TITLE>
 		<ARTIST>Bob Dylan</ARTIST>
 		<COUNTRY>USA</COUNTRY>
-		<COMPANY>Columbia</COMPANY>
+		<COMPANY>'asd''''</COMPANY>
 		<PRICE>10.90</PRICE>
 		<YEAR>1985</YEAR>
 	</CD>
@@ -151,7 +146,7 @@
 	</CD>
 	<CD>
 		<TITLE>Bridge of Spies</TITLE>
-		<ARTIST>T'Pau</ARTIST>
+		<ARTIST>T Pau</ARTIST>
 		<COUNTRY>UK</COUNTRY>
 		<COMPANY>Siren</COMPANY>
 		<PRICE>7.90</PRICE>
