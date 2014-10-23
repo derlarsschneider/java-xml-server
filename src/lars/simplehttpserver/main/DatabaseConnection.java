@@ -15,41 +15,30 @@ public class DatabaseConnection {
 	private static final String DATABASE_PROPERTIES_FILE = "database.properties";
 	private Connection connection;
 
-	public DatabaseConnection() throws IOException {
+	public DatabaseConnection() throws IOException, ClassNotFoundException,
+			SQLException {
 		ClassLoader loader = Thread.currentThread().getContextClassLoader();
 		Properties props = new Properties();
 		try (InputStream resourceStream = loader
 				.getResourceAsStream(DATABASE_PROPERTIES_FILE)) {
 			props.load(resourceStream);
 		}
-		if (props.contains("dbDriver") && props.contains("dbUrl") && 
-				props.contains("dbUser") && props.contains("dbPass")) {
-			init(props.getProperty("dbDriver"), props.getProperty("dbUrl"),
-					props.getProperty("dbUser"), props.getProperty("dbPass"));
-		} else {
-			init("org.hsqldb.jdbcDriver", "jdbc:hsqldb:hsql://localhost:9001",
-					"sa", "");
-		}
-
+		init(props.getProperty("dbDriver", "org.hsqldb.jdbcDriver"),
+				props.getProperty("dbUrl", "jdbc:hsqldb:hsql://localhost:9001"),
+				props.getProperty("dbUser", "sa"),
+				props.getProperty("dbPass", ""));
 	}
 
 	public DatabaseConnection(String driver, String url, String user,
-			String pass) {
+			String pass) throws ClassNotFoundException, SQLException {
 		init(driver, url, user, pass);
 	}
 
-	private void init(String driver, String url, String user, String pass) {
-		try {
-			Class.forName(driver);
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-		}
+	private void init(String driver, String url, String user, String pass)
+			throws ClassNotFoundException, SQLException {
+		Class.forName(driver);
 
-		try {
-			connection = DriverManager.getConnection(url, user, pass);
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+		connection = DriverManager.getConnection(url, user, pass);
 	}
 
 	public void close() throws SQLException {
