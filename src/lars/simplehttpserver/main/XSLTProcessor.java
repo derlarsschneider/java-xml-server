@@ -1,32 +1,25 @@
 package lars.simplehttpserver.main;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.StringReader;
-import java.net.URI;
 import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.List;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.Result;
 import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 import javax.xml.xpath.XPathExpressionException;
-
-import lars.simplehttpserver.helper.URIUtils;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -35,48 +28,41 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
+public class XSLTProcessor {
 
-public class XSLTProcessor implements HttpHandler {
-	@Override
-	public void handle(HttpExchange t) throws IOException {
+	public void compareXmlWithDB() {
+		NodeList rows = getRoot().getElementsByTagName("tr");
+		for (int i = 0; i < rows.getLength(); i++) {
+			Element row = (Element) rows.item(i);
+			Node rowNameAttribute = row.getAttributes().getNamedItem("name");
+			if (rowNameAttribute != null
+					&& "xmlContent".equals(rowNameAttribute.getTextContent())) {
+				row.setAttribute("class", "xmlContent");
+				NodeList xmlElementList = row.getChildNodes();
+				NodeList dbElementList = row.getNextSibling().getChildNodes();
+				for (int j = 1; j < xmlElementList.getLength(); j++) {
 
-		URI uri = t.getRequestURI();
-		HashMap<String, String> parameter = URIUtils.parseQuery(uri);
-
-		String response = "";
-		try {
-			XSLTProcessor p = new XSLTProcessor();
-			if (parameter.get("xml") == null) {
-				throw new Exception("URL parameter xml missing.");
+					Element xmlElement = (Element) xmlElementList.item(j);
+					Element dbElement = (Element) dbElementList.item(j);
+					if (dbElement == null) {
+						xmlElement.setAttribute("class", "NOK");
+					} else {
+						String xmlTextContent = xmlElement.getTextContent()
+								.trim();
+						String textContent = dbElement.getTextContent();
+						System.out.println(textContent);
+						String dbTextContent = textContent.trim();
+						if (xmlTextContent.equals(dbTextContent)) {
+							xmlElement.setAttribute("class", "OK");
+							dbElement.setAttribute("class", "OK");
+						} else {
+							xmlElement.setAttribute("class", "NOK");
+							dbElement.setAttribute("class", "NOK");
+						}
+					}
+				}
 			}
-			if (parameter.get("xsl") == null) {
-				throw new Exception("URL parameter xsl missing.");
-			}
-			p.setXmlFile(new File(parameter.get("xml")));
-			p.setXslFile(new File(parameter.get("xsl")));
-			p.applyXSL();
-			p.replaceSqlWithResult();
 
-			ByteArrayOutputStream out = new ByteArrayOutputStream();
-			Transformer transformer = TransformerFactory.newInstance().newTransformer();
-			Source source = new DOMSource(p.root);
-			Result target = new StreamResult(out);
-			transformer.transform(source, target);
-			response = out.toString();
-			p.printRoot();
-		} catch (Exception e) {
-			e.printStackTrace();
-			response = "<pre>" + e.getMessage() + "\r\n\t"
-					+ Arrays.toString(e.getStackTrace()).replace(", ", "\r\n\t").replace("[", "").replace("]", "")
-					+ "</pre>";
-
-		} finally {
-			t.sendResponseHeaders(200, response.length());
-			OutputStream os = t.getResponseBody();
-			os.write(response.getBytes());
-			os.close();
 		}
 	}
 
@@ -84,8 +70,6 @@ public class XSLTProcessor implements HttpHandler {
 		XSLTProcessor p = new XSLTProcessor();
 		p.setXmlFile(new File("test/cd-catalogue.xml"));
 		p.setXslFile(new File("test/artists.xsl"));
-		// p.find("/CATALOG/CD/TITLE");
-		// System.out.println(p.readXML());
 		p.applyXSL();
 		p.replaceSqlWithResult();
 		p.printRoot();
@@ -112,7 +96,13 @@ public class XSLTProcessor implements HttpHandler {
 		}
 	}
 
-	private void parseStream(InputStream inputStream) throws SAXException, IOException, ParserConfigurationException {
+	public void parseXML() throws SAXException, IOException,
+			ParserConfigurationException {
+		parseStream(new FileInputStream(xmlFile));
+	}
+
+	private void parseStream(InputStream inputStream) throws SAXException,
+			IOException, ParserConfigurationException {
 		Document doc = documentBuilder.parse(inputStream);
 		// optional, but recommended
 		// http://stackoverflow.com/questions/13786607/normalization-in-dom-parsing-with-java-how-does-it-work
@@ -148,7 +138,8 @@ public class XSLTProcessor implements HttpHandler {
 		}
 
 		if (node.hasChildNodes()) {
-			System.out.println(node.getNodeName());
+			System.out.println(node.getNodeName() + " "
+					+ node.getAttributes().getNamedItem("class"));
 			NodeList childNodes = node.getChildNodes();
 			for (int i = 0; i < childNodes.getLength(); i++) {
 				Node child = childNodes.item(i);
@@ -159,15 +150,17 @@ public class XSLTProcessor implements HttpHandler {
 		}
 	}
 
+	@SuppressWarnings("unused")
 	private void printTree(Node node) {
 		printTree(node, 0);
 	}
 
-	private void printRoot() {
-		printTree(root, 0);
+	public void printRoot() {
+		printTree(getRoot(), 0);
 	}
 
-	public void applyXSL() throws TransformerException, IOException, SAXException, ParserConfigurationException {
+	public void applyXSL() throws TransformerException, IOException,
+			SAXException, ParserConfigurationException {
 
 		TransformerFactory factory = TransformerFactory.newInstance();
 		Source xslt = new StreamSource(xslFile);
@@ -195,42 +188,58 @@ public class XSLTProcessor implements HttpHandler {
 		parseStream(input);
 	}
 
-	private void replaceSqlWithResult() throws XPathExpressionException, SAXException, IOException,
-			ParserConfigurationException, SQLException {
+	public void replaceSqlWithResult() throws XPathExpressionException,
+			SAXException, IOException, ParserConfigurationException,
+			SQLException {
 		DatabaseConnection connection = new DatabaseConnection();
-		// NodeList nodeList = findAll("//sql-select");
-		NodeList nodeList = root.getOwnerDocument().getElementsByTagName("sql-select");
-		while (nodeList.getLength() > 0) {
+		try {
+			// NodeList nodeList = findAll("//sql-select");
+			NodeList nodeList = getRoot().getOwnerDocument().getElementsByTagName(
+					"sql-select");
+			while (nodeList.getLength() > 0) {
 
-			Node sqlQueryNode = nodeList.item(0);
-			String sqlQuery = sqlQueryNode.getTextContent();
-			for (int i = 10; i > 1; i--) {
-				String regex = "encode\\(([^']*)";
-				String replacement = "$1";
-				for (int j = 2; j < i; j++) {
-					regex += "'(.*)";
-					replacement += "''$" + j;
+				Node sqlQueryNode = nodeList.item(0);
+				String sqlQuery = sqlQueryNode.getTextContent();
+				for (int i = 10; i > 1; i--) {
+					String regex = "encode\\(([^']*)";
+					String replacement = "$1";
+					for (int j = 2; j < i; j++) {
+						regex += "'(.*)";
+						replacement += "''$" + j;
+					}
+					regex += "\\)";
+					sqlQuery = sqlQuery.replaceAll(regex, replacement);
 				}
-				regex += "\\)";
-				sqlQuery = sqlQuery.replaceAll(regex, replacement);
+				sqlQuery = sqlQuery.replaceAll("LIKE '%'", "is null");
+				System.out.println(sqlQuery);
+				List<String> sqlResultList = connection.select(sqlQuery);
+				if (sqlResultList == null || sqlResultList.size() == 0) {
+					insertNodeBefore(sqlQueryNode,
+							"<tr style=\"background:#ee1111\"><td colspan=\"999\">"
+									+ sqlQuery + "</td></tr>");
+				} else {
+					for (String sqlResult : sqlResultList) {
+						insertNodeBefore(sqlQueryNode, sqlResult);
+					}
+				}
+				sqlQueryNode.getParentNode().removeChild(sqlQueryNode);
 			}
-			sqlQuery = sqlQuery.replaceAll("encode\\((.*)'(.*)'(.*)\\)", "$1''$2''$3");
-			sqlQuery = sqlQuery.replaceAll("encode\\((.*)'(.*)\\)", "$1''$2");
-			sqlQuery = sqlQuery.replaceAll("encode\\((.*)\\)", "$1");
-			String sqlResult = connection.select(sqlQuery);
-			// Node node = new Node();
-			if ("".equals(sqlResult)) {
-				sqlResult = "<tr style=\"background:#ee1111\"><td colspan=\"999\">" + sqlQuery + "</td></tr>";
+		} finally {
+			if (connection != null) {
+				connection.close();
 			}
-			// Node sqlResult =
-			// p.documentBuilder.newDocument().createTextNode(result);
-			Document doc = sqlQueryNode.getOwnerDocument();
-			Node sqlResultNode = documentBuilder.parse(new InputSource(new StringReader(sqlResult)))
-					.getDocumentElement();
-			sqlResultNode = doc.importNode(sqlResultNode, true);
-
-			sqlQueryNode = sqlQueryNode.getParentNode().replaceChild(sqlResultNode, sqlQueryNode);
 		}
+	}
+
+	private void insertNodeBefore(Node sqlQueryNode, String sqlResult)
+			throws SAXException, IOException {
+		Node sqlResultNode = documentBuilder.parse(
+				new InputSource(new StringReader(sqlResult)))
+				.getDocumentElement();
+		sqlResultNode = sqlQueryNode.getOwnerDocument().importNode(
+				sqlResultNode, true);
+
+		sqlQueryNode.getParentNode().insertBefore(sqlResultNode, sqlQueryNode);
 	}
 
 	public File getXmlFile() {
@@ -247,6 +256,10 @@ public class XSLTProcessor implements HttpHandler {
 
 	public void setXslFile(File xslFile) {
 		this.xslFile = xslFile;
+	}
+
+	public Element getRoot() {
+		return root;
 	}
 
 }
