@@ -1,5 +1,7 @@
 package lars.simplehttpserver.main;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -7,13 +9,28 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 public class DatabaseConnection {
+	private static final String DATABASE_PROPERTIES_FILE = "database.properties";
 	private Connection connection;
 
-	public DatabaseConnection() {
-		init("org.hsqldb.jdbcDriver", "jdbc:hsqldb:hsql://localhost:9001",
-				"sa", "");
+	public DatabaseConnection() throws IOException {
+		ClassLoader loader = Thread.currentThread().getContextClassLoader();
+		Properties props = new Properties();
+		try (InputStream resourceStream = loader
+				.getResourceAsStream(DATABASE_PROPERTIES_FILE)) {
+			props.load(resourceStream);
+		}
+		if (props.contains("dbDriver") && props.contains("dbUrl") && 
+				props.contains("dbUser") && props.contains("dbPass")) {
+			init(props.getProperty("dbDriver"), props.getProperty("dbUrl"),
+					props.getProperty("dbUser"), props.getProperty("dbPass"));
+		} else {
+			init("org.hsqldb.jdbcDriver", "jdbc:hsqldb:hsql://localhost:9001",
+					"sa", "");
+		}
+
 	}
 
 	public DatabaseConnection(String driver, String url, String user,
