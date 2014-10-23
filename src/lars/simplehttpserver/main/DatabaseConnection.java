@@ -1,21 +1,23 @@
 package lars.simplehttpserver.main;
 
-import java.io.PrintStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DatabaseConnection {
-	private static PrintStream log = System.out;
 	private Connection connection;
 
 	public DatabaseConnection() {
-		init("org.hsqldb.jdbcDriver", "jdbc:hsqldb:hsql://localhost:9001", "sa", "");
+		init("org.hsqldb.jdbcDriver", "jdbc:hsqldb:hsql://localhost:9001",
+				"sa", "");
 	}
 
-	public DatabaseConnection(String driver, String url, String user, String pass) {
+	public DatabaseConnection(String driver, String url, String user,
+			String pass) {
 		init(driver, url, user, pass);
 	}
 
@@ -33,7 +35,11 @@ public class DatabaseConnection {
 		}
 	}
 
-	public String select(String sql) throws SQLException {
+	public void close() throws SQLException {
+		connection.close();
+	}
+
+	public List<String> select(String sql) throws SQLException {
 
 		Statement statement = connection.createStatement();
 		try {
@@ -41,18 +47,23 @@ public class DatabaseConnection {
 		} catch (SQLException e) {
 			e.printStackTrace();
 			System.err.println(sql);
-			return "";
+			return null;
 		}
 		ResultSet resultSet = statement.getResultSet();
-		String result = "";
 		int columnCount = resultSet.getMetaData().getColumnCount();
+		List<String> rowList = new ArrayList<String>();
 		while (resultSet.next()) {
-			result += "<tr>";
+			String rowString = "<tr>";
 			for (int i = 1; i <= columnCount; i++) {
-				result += "<td>" + resultSet.getObject(i) + "</td>";
+				if (resultSet.getObject(i) == null) {
+					rowString += "<td></td>";
+				} else {
+					rowString += "<td>" + resultSet.getObject(i) + "</td>";
+				}
 			}
-			result += "</tr>";
+			rowString += "</tr>";
+			rowList.add(rowString);
 		}
-		return result;
+		return rowList;
 	}
 }
